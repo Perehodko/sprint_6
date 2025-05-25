@@ -36,7 +36,7 @@ func createRouter() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Get("/", handlers.BackHTML)
-	router.Post("/upload", handlers.HandleUpload)
+	router.Post("/upload", handlers.HandlerUpload)
 
 	return router
 }

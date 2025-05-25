@@ -24,32 +24,32 @@ func BackHTML(res http.ResponseWriter, req *http.Request) {
 	res.Write(htmlContent)
 }
 
-func HandleUpload(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+func HandlerUpload(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	err := r.ParseMultipartForm(10 << 20)
+	err := req.ParseMultipartForm(10 << 20)
 	if err != nil {
-		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
+		http.Error(res, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	file, fileHeader, err := r.FormFile("myFile")
+	file, fileHeader, err := req.FormFile("myFile")
 	if err != nil {
-		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(res, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		http.Error(res, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	content := string(fileBytes)
 	result, err := service.AutoDetectAndConvert(content)
 	if err != nil {
-		http.Error(w, "Conversion error: "+err.Error(), http.StatusBadRequest)
+		http.Error(res, "Conversion error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -59,19 +59,19 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 	
 	err = os.WriteFile(newFilename, []byte(result), 0644)
 	if err != nil {
-		http.Error(w, "Failed to save result file: "+err.Error(), http.StatusInternalServerError)
+		http.Error(res, "Failed to save result file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(result))
+	res.WriteHeader(http.StatusOK)
+	res.Write([]byte(result))
 }
 
 func main() {
     r := chi.NewRouter()
 
     r.Get("/", BackHTML)
-	r.Get("/upload", HandleUpload)
+	r.Get("/upload", HandlerUpload)
 
     err := http.ListenAndServe(":8080", r) 
     if err != nil {

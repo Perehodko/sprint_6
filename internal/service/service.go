@@ -9,7 +9,6 @@ import (
 )
 
 func AutoDetectAndConvert(input string) (string, error) {
-	input = strings.TrimPrefix(input, "\xef\xbb\xbf")
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return "", errors.New("empty input")
