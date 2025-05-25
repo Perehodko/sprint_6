@@ -24,45 +24,47 @@ func BackHTML(res http.ResponseWriter, req *http.Request) {
 	res.Write(htmlContent)
 }
 
-func HandleUpload(res http.ResponseWriter, req *http.Request) {
-    err := req.ParseMultipartForm(10 << 20) 
-    if err != nil {
-        http.Error(res, "Failed to parse form", http.StatusBadRequest)
-        return
-    }
+func HandleUpload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-    file, header, err := req.FormFile("myFile")
-    if err != nil {
-        http.Error(res, "File not found in form", http.StatusBadRequest)
-        return
-    }
-    defer file.Close()
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		http.Error(w, "Failed to parse form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	file, fileHeader, err := r.FormFile("myFile")
+	if err != nil {
+		http.Error(w, "Failed to get file from form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
 
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(res, "Error reading file content", http.StatusInternalServerError)
+		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	convertedData, err := service.AutoDetectAndConvert(string(fileBytes))
+	content := string(fileBytes)
+	result, err := service.AutoDetectAndConvert(content)
 	if err != nil {
-		http.Error(res, fmt.Sprintf("Conversion error: %v", err), http.StatusInternalServerError)
+		http.Error(w, "Conversion error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	fileName := fmt.Sprintf("result_%s%s", 
-		time.Now().UTC().Format("20060102_150405"),
-		filepath.Ext(header.Filename))
-
-	err = os.WriteFile(fileName, []byte(convertedData), 0644)
+	originalExt := filepath.Ext(fileHeader.Filename)
+	timestamp := time.Now().UTC().Format("20060102_150405")
+	newFilename := fmt.Sprintf("converted_%s%s", timestamp, originalExt)
+	
+	err = os.WriteFile(newFilename, []byte(result), 0644)
 	if err != nil {
-		http.Error(res, "Error saving result file", http.StatusInternalServerError)
+		http.Error(w, "Failed to save result file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusOK)
-	res.Write([]byte(convertedData))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(result))
 }
 
 func main() {

@@ -1,56 +1,52 @@
 package service
 
 import (
-    "errors"
-    "strings"
+	"errors"
+	"strings"
+	"unicode"
 
-    "github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
+	"github.com/Yandex-Practicum/go1fl-sprint6-final/pkg/morse"
 )
 
 func AutoDetectAndConvert(input string) (string, error) {
-    normalized := strings.TrimSpace(input)
-    if normalized == "" {
-        return "", errors.New("empty input")
-    }
+	input = strings.TrimPrefix(input, "\xef\xbb\xbf")
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", errors.New("empty input")
+	}
 
-    if isMorseCode(normalized) {
-        return morseToText(normalized)
-    }
-    return textToMorse(normalized)
+	converter := morse.NewConverter(
+		morse.DefaultMorse,
+		morse.WithCharSeparator(" "),
+		morse.WithWordSeparator("   "),
+		morse.WithLowercaseHandling(true),
+	)
+
+	if isMorseCode(input) {
+		result := converter.ToText(input)
+		if strings.Contains(result, "�") {
+			return "", errors.New("invalid morse code")
+		}
+		return result, nil
+	}
+
+	for _, r := range input {
+		if _, exists := morse.DefaultMorse[unicode.ToUpper(r)]; !exists && !unicode.IsSpace(r) {
+			return "", errors.New("unsupported character: " + string(r))
+		}
+	}
+
+	return converter.ToMorse(input), nil
 }
 
 func isMorseCode(s string) bool {
-    converter := morse.DefaultConverter
-    result := converter.ToText(s)
-    return !strings.Contains(result, "�") && 
-           !strings.Contains(result, string(morse.ErrNoEncoding{}.Text))
-}
-
-func textToMorse(text string) (string, error) {
-    converter := morse.NewConverter(
-        morse.DefaultMorse,
-        morse.WithCharSeparator(" "),
-        morse.WithWordSeparator("   "),
-        morse.WithLowercaseHandling(true),
-        morse.WithHandler(handleError),
-    )
-    return converter.ToMorse(text), nil
-}
-
-func morseToText(morseStr string) (string, error) {
-    converter := morse.NewConverter(
-        morse.DefaultMorse,
-        morse.WithCharSeparator(" "),
-        morse.WithWordSeparator("   "),
-        morse.WithHandler(handleError),
-    )
-    result := converter.ToText(morseStr)
-    if strings.Contains(result, "�") {
-        return "", errors.New("invalid morse code detected")
-    }
-    return result, nil
-}
-
-func handleError(err error) string {
-    return "�"
+	if s == "" {
+		return false
+	}
+	for _, ch := range s {
+		if ch != '.' && ch != '-' && ch != ' ' && ch != '/' {
+			return false
+		}
+	}
+	return true
 }
