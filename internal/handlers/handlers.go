@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 	
-    "github.com/go-chi/chi/v5"
 	"github.com/Yandex-Practicum/go1fl-sprint6-final/internal/service"
 )
 
@@ -21,7 +20,11 @@ func BackHTML(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	
-	res.Write(htmlContent)
+	_, err = res.Write(htmlContent)
+	if err != nil {
+		http.Error(res, "Could not write HTML content: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func HandlerUpload(res http.ResponseWriter, req *http.Request) {
@@ -67,14 +70,3 @@ func HandlerUpload(res http.ResponseWriter, req *http.Request) {
 	res.Write([]byte(result))
 }
 
-func main() {
-    r := chi.NewRouter()
-
-    r.Get("/", BackHTML)
-	r.Get("/upload", HandlerUpload)
-
-    err := http.ListenAndServe(":8080", r) 
-    if err != nil {
-        panic(err)
-    }
-}
